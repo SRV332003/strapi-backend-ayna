@@ -22,7 +22,7 @@ module.exports = {
     const io = new Server(strapi.server.httpServer, {
       path: '/chatws',
       cors: {
-        origin: 'http://localhost:5173',methods: ["GET", "POST"]
+        origin: 'https://frontend-ayna.vercel.app',methods: ["GET", "POST"]
       },
     });
 
