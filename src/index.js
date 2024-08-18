@@ -29,41 +29,43 @@ module.exports = {
     strapi.io = io;
 
 
-    strapi.connections = {};
     io.on('connection', async (socket) => {
       console.log('a user connected');
       const token = await socket.handshake.auth.token;
       //verify token and get user
-      const resp = await strapi.plugins[("users-permissions")].services.jwt.verify(token);
-      if(resp){
-        const id = resp.id;
-        try {
-          const user = await strapi.db.query('plugin::users-permissions.user').findOne({where: {id}});
-          strapi.connections[user.username] = socket;
-          socket.on('disconnect', () => {
-            console.log('user disconnected');
-            strapi.connections[user.username] = null;
-          });
-          socket.on('message', (msg) => {
-            // get username from token
-            const jsonData = JSON.parse(msg);
-            if(socket.id != strapi.connections[jsonData.data.sender].id){
-              console.log('unauthorized');
-              socket.disconnect();
-              return;
-            }
-            if(strapi.connections[jsonData.data.recipient]){
-              strapi.connections[jsonData.data.recipient].emit('message', JSON.stringify(jsonData));
-            }else{
-              console.log('Reciever not found or not online');
-            }
-            console.log('message: ' + msg);
-          });
-        } catch (error) {
-          console.log(error);
+      try{
+        if(!token){
+          console.log('unauthorized');
+          socket.disconnect();
         }
-      }else{
-        console.log('unauthorized');
+        const resp = await strapi.plugins[("users-permissions")].services.jwt.verify(token);
+
+        if(resp){
+          const id = resp.id;
+          try {
+
+            socket.on('disconnect', () => {
+              console.log('user disconnected');
+            });
+
+
+            socket.on('message', (msg) => {
+            let jsonData = JSON.parse(msg);
+            jsonData.data.identifier = "server";
+            
+            socket.emit('message', JSON.stringify(jsonData));
+            console.log('message: ' + jsonData);
+            });
+
+          } catch (error) {
+            console.log(error);
+          }
+        }else{
+          console.log('unauthorized');
+          socket.disconnect();
+        }
+      }catch(err){
+        console.log(err);
         socket.disconnect();
       }
     });
